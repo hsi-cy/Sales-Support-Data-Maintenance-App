@@ -1,0 +1,138 @@
+import tkinter as tk
+from tkinter import ttk
+from tkinter import filedialog as fd
+import xlwings as xw
+import os
+import time
+
+#choose excel file 
+
+def do_askopenfilename():
+    file_path = fd.askopenfilename()
+    global excel_path
+    excel_path = file_path
+    
+        
+#choose path where you want to scrape names    
+def do_askdir():
+    global folder_dir
+    folder_dir = fd.askdirectory()
+    
+def run_the_function():
+    #open Excel
+    xw.Book(excel_path)
+    workbook = xw.Book(excel_path)
+    sheet = workbook.sheets[0]
+    #loads existed names in Excel
+    existed_file_names = sheet.range('A1').expand('table').value
+    #clean the data
+    def change_existed_names_to_allstring(list):
+        count = 0
+        for element in list:
+            if type(element) is float:
+                list[count] = str(int(list[count]))
+                count += 1
+            else:
+                count += 1
+        return list
+    
+    #新建一個變數 將執行轉檔function後的結果存入  若EXCEL為空白 就可以省略此步驟 因此使用!= None來辨別
+    known_names = []
+    if existed_file_names != None:
+        for lst in existed_file_names:
+            transformed_names = change_existed_names_to_allstring(lst)
+            known_names.append(transformed_names)
+    
+    #找到最後一行位置
+    def find_last_row():
+        from xlwings import Range, constants
+        last_row_number = workbook.sheets[0].range('A' + str(workbook.sheets[0].cells.last_cell.row)).end('up').row
+        return last_row_number
+        
+    #將最後一行位直儲存至變數中
+    count = find_last_row() + 1
+    
+    #跑for loop 將FOLDER內的檔名抓下
+    def clean_the_file_name(file):
+        file_first_split = file.split('.')
+        file_without_file_type = file_first_split[0]
+        file_second_split = file_without_file_type.split('_')
+        return file_second_split
+    
+    
+    for file in os.listdir(folder_dir): 
+        clean_file = clean_the_file_name(file)
+        if clean_file not in known_names:
+            sheet.range('A'+ str(count)).expand('table').value = clean_file
+            count += 1 
+    
+                
+    workbook.save()
+    workbook.close()
+    from tkinter import messagebox
+
+    messagebox.showinfo( 'Message','Work Completed!' )
+
+
+root=tk.Tk()
+
+root.title("Ecolab Data Maintenance App")
+
+root.geometry("350x240")
+
+root.resizable(0,0)
+
+Ecolab_welcom = ttk.Label(root,font = "Helvetica 12 bold" ,text = 'Welcome to Ecolab Data-Maintenance APP')
+Ecolab_welcom.pack()
+
+blank_1 = ttk.Label(root,)
+blank_1.pack(fill='x')
+
+choose_file = ttk.Button(root, text = 'Choose Excel File', width=20,command = do_askopenfilename)
+choose_file.pack()
+
+blank_2 = ttk.Label(root,)
+blank_2.pack(fill='x')
+
+choose_folder = ttk.Button(root, text="Choose Folder",width=20, command = do_askdir)
+choose_folder.pack()
+
+blank_3 = ttk.Label(root,)
+blank_3.pack(fill='x')
+
+Execute = ttk.Button(root, text="Execute",width=20, command = run_the_function)
+Execute.pack()
+
+blank_4 = ttk.Label(root,)
+blank_4.pack(fill='x')
+
+
+status = tk.Label(root, text="Working")
+status.pack()
+def update_status():
+
+    # Get the current message
+    current_status = status["text"]
+
+    # If the message is "Working...", start over with "Working"
+    if current_status.endswith("..."): current_status = "Working"
+
+    # If not, then just add a "." on the end
+    else: current_status += "."
+
+    # Update the message
+    status["text"] = current_status
+
+    # After 1 second, update the status
+    root.after(1000, update_status)
+
+# Launch the status message after 1 millisecond (when the window is loaded)
+root.after(1, update_status)
+
+blank_5 = ttk.Label(root,)
+blank_5.pack(fill='x')
+
+signature = ttk.Label(root,font ="Helvetica 8" , text = '@2019 F&B Intern Eric Hsi')#, relief = 'sunken')
+signature.pack(side = 'bottom' , fill='x')
+
+root.mainloop()
